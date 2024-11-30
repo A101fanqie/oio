@@ -1,0 +1,300 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>订单管理系统</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: Arial, sans-serif;
+            line-height: 1.6;
+            background: #f4f4f4;
+            padding: 15px;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            padding: 20px;
+        }
+
+        .header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+            padding-bottom: 15px;
+            border-bottom: 1px solid #eee;
+        }
+
+        h1 {
+            color: #333;
+            font-size: 24px;
+        }
+
+        .login-section {
+            text-align: center;
+            padding: 40px 20px;
+        }
+
+        .login-form {
+            max-width: 300px;
+            margin: 0 auto;
+        }
+
+        input {
+            width: 100%;
+            padding: 10px;
+            margin-bottom: 10px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            font-size: 16px;
+        }
+
+        button {
+            background: #4CAF50;
+            color: white;
+            padding: 10px 20px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 16px;
+            width: 100%;
+        }
+
+        button:hover {
+            background: #45a049;
+        }
+
+        button.delete-btn {
+            background: #ff4444;
+        }
+
+        button.delete-btn:hover {
+            background: #ff0000;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 20px;
+            background: white;
+        }
+
+        th, td {
+            padding: 12px;
+            text-align: left;
+            border-bottom: 1px solid #eee;
+        }
+
+        th {
+            background: #4CAF50;
+            color: white;
+        }
+
+        tr:hover {
+            background: #f9f9f9;
+        }
+
+        .status-new {
+            color: #ff4444;
+            font-weight: bold;
+        }
+
+        .status-completed {
+            color: #4CAF50;
+            font-weight: bold;
+        }
+
+        .action-buttons {
+            display: flex;
+            gap: 5px;
+        }
+
+        @media (max-width: 768px) {
+            .container {
+                padding: 10px;
+                margin: 0;
+            }
+
+            table {
+                display: block;
+                overflow-x: auto;
+                white-space: nowrap;
+            }
+
+            th, td {
+                padding: 8px;
+                font-size: 14px;
+            }
+
+            .action-buttons {
+                flex-direction: column;
+            }
+
+            .action-buttons button {
+                margin: 2px 0;
+                padding: 6px;
+                font-size: 12px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div id="loginPage" class="login-section">
+            <h1 style="margin-bottom: 30px;">订单管理系统</h1>
+            <div class="login-form">
+                <input type="password" id="adminPassword" placeholder="请输入管理密码" 
+                    onkeypress="if(event.key === 'Enter') login()">
+                <button onclick="login()">登录</button>
+            </div>
+        </div>
+
+        <div id="mainPage" style="display: none;">
+            <div class="header">
+                <h1>订单管理系统</h1>
+                <button onclick="logout()" style="width: auto;">退出登录</button>
+            </div>
+            <div id="orderList">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>订单时间</th>
+                            <th>微信号</th>
+                            <th>手机号</th>
+                            <th>密码</th>
+                            <th>产品</th>
+                            <th>课程</th>
+                            <th>状态</th>
+                            <th>操作</th>
+                        </tr>
+                    </thead>
+                    <tbody id="orderTableBody">
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const ADMIN_PASSWORD = '1234';
+        let orders = [];
+        
+        // 检查登录状态
+        function checkLoginStatus() {
+            const isLoggedIn = sessionStorage.getItem('adminLoggedIn') === 'true';
+            document.getElementById('loginPage').style.display = isLoggedIn ? 'none' : 'block';
+            document.getElementById('mainPage').style.display = isLoggedIn ? 'block' : 'none';
+            if (isLoggedIn) {
+                refreshOrders();
+            }
+        }
+
+        function login() {
+            const password = document.getElementById('adminPassword').value;
+            if (password === ADMIN_PASSWORD) {
+                sessionStorage.setItem('adminLoggedIn', 'true');
+                checkLoginStatus();
+                document.getElementById('adminPassword').value = '';
+            } else {
+                alert('密码错误！');
+            }
+        }
+
+        function logout() {
+            sessionStorage.removeItem('adminLoggedIn');
+            checkLoginStatus();
+        }
+
+        function refreshOrders() {
+            try {
+                const ordersData = localStorage.getItem('orders');
+                orders = ordersData ? JSON.parse(ordersData) : [];
+                loadOrders();
+            } catch (error) {
+                console.error('Error loading orders:', error);
+                orders = [];
+            }
+        }
+
+        function loadOrders() {
+            const tbody = document.getElementById('orderTableBody');
+            tbody.innerHTML = '';
+            
+            const reversedOrders = [...orders].reverse();
+            
+            reversedOrders.forEach((order, index) => {
+                const realIndex = orders.length - 1 - index;
+                const tr = document.createElement('tr');
+                tr.innerHTML = `
+                    <td>${order.time}</td>
+                    <td>${order.name}</td>
+                    <td>${order.phone}</td>
+                    <td>${order.password}</td>
+                    <td>${getProductName(order.product)}</td>
+                    <td>${order.quantity}</td>
+                    <td class="${order.status === '新订单' ? 'status-new' : 'status-completed'}">
+                        ${order.status}
+                    </td>
+                    <td>
+                        <div class="action-buttons">
+                            <button onclick="changeStatus(${realIndex})">
+                                ${order.status === '新订单' ? '标记完成' : '重置状态'}
+                            </button>
+                            <button class="delete-btn" onclick="deleteOrder(${realIndex})">删除</button>
+                        </div>
+                    </td>
+                `;
+                tbody.appendChild(tr);
+            });
+        }
+
+        function getProductName(productValue) {
+            const productMap = {
+                'product1': '学习通视频＋测验',
+                'product2': '学习通单考试',
+                'product3': '学习通全包',
+                'product4': '智慧树全套'
+            };
+            return productMap[productValue] || productValue;
+        }
+
+        function changeStatus(index) {
+            orders[index].status = orders[index].status === '新订单' ? '已完成' : '新订单';
+            localStorage.setItem('orders', JSON.stringify(orders));
+            loadOrders();
+        }
+
+        function deleteOrder(index) {
+            if (confirm('确定要删除这个订单吗？')) {
+                orders.splice(index, 1);
+                localStorage.setItem('orders', JSON.stringify(orders));
+                loadOrders();
+            }
+        }
+
+        // 页面加载时检查登录状态
+        document.addEventListener('DOMContentLoaded', function() {
+            checkLoginStatus();
+            // 添加定时刷新
+            setInterval(refreshOrders, 3000);
+        });
+
+        // 添加错误处理
+        window.onerror = function(msg, url, lineNo, columnNo, error) {
+            console.error('Error: ' + msg + '\nURL: ' + url + '\nLine: ' + lineNo);
+            return false;
+        };
+    </script>
+</body>
+</html> 
